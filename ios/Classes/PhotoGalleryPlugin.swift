@@ -16,7 +16,12 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
       let arguments = call.arguments as! Dictionary<String, AnyObject>
       let mediumType = arguments["mediumType"] as? String
       let hideIfEmpty = arguments["hideIfEmpty"] as? Bool
-      result(listAlbums(mediumType: mediumType, hideIfEmpty: hideIfEmpty))
+      DispatchQueue.global(qos: .userInitiated).async {
+        let albums = self.listAlbums(mediumType: mediumType, hideIfEmpty: hideIfEmpty)
+        DispatchQueue.main.async {
+          result(albums)
+        }
+      }
     }
     else if(call.method == "listMedia") {
       let arguments = call.arguments as! Dictionary<String, AnyObject>
@@ -26,23 +31,34 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
       let skip = arguments["skip"] as? NSNumber
       let take = arguments["take"] as? NSNumber
       let lightWeight = arguments["lightWeight"] as? Bool
-      result(listMedia(
-        albumId: albumId,
-        mediumType: mediumType,
-        newest: newest,
-        skip: skip,
-        take: take,
-        lightWeight: lightWeight
-      ))
+      DispatchQueue.global(qos: .userInitiated).async {
+        let media = self.listMedia(
+          albumId: albumId,
+          mediumType: mediumType,
+          newest: newest,
+          skip: skip,
+          take: take,
+          lightWeight: lightWeight
+        )
+        DispatchQueue.main.async {
+          result(media)
+        }
+      }
     }
     else if(call.method == "getMedium") {
       let arguments = call.arguments as! Dictionary<String, AnyObject>
       let mediumId = arguments["mediumId"] as! String
-      do {
-        let medium = try getMedium(mediumId: mediumId)
-        result(medium)
-      } catch {
-        result(nil)
+      DispatchQueue.global(qos: .userInitiated).async {
+        do {
+          let medium = try self.getMedium(mediumId: mediumId)
+          DispatchQueue.main.async {
+            result(medium)
+          }
+        } catch {
+          DispatchQueue.main.async {
+            result(nil)
+          }
+        }
       }
     }
     else if(call.method == "getThumbnail") {
@@ -51,15 +67,19 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
       let width = arguments["width"] as? NSNumber
       let height = arguments["height"] as? NSNumber
       let highQuality = arguments["highQuality"] as? Bool
-      getThumbnail(
-        mediumId: mediumId,
-        width: width,
-        height: height,
-        highQuality: highQuality,
-        completion: { (data: Data?, error: Error?) -> Void in
-          result(data)
-        }
-      )
+      DispatchQueue.global(qos: .userInitiated).async {
+        self.getThumbnail(
+          mediumId: mediumId,
+          width: width,
+          height: height,
+          highQuality: highQuality,
+          completion: { (data: Data?, error: Error?) -> Void in
+            DispatchQueue.main.async {
+              result(data)
+            }
+          }
+        )
+      }
     }
     else if(call.method == "getAlbumThumbnail") {
       let arguments = call.arguments as! Dictionary<String, AnyObject>
@@ -69,43 +89,59 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
       let width = arguments["width"] as? Int
       let height = arguments["height"] as? Int
       let highQuality = arguments["highQuality"] as? Bool
-      getAlbumThumbnail(
-        albumId: albumId,
-        mediumType: mediumType,
-        newest: newest,
-        width: width,
-        height: height,
-        highQuality: highQuality,
-        completion: { (data: Data?, error: Error?) -> Void in
-          result(data)
-        }
-      )
+      DispatchQueue.global(qos: .userInitiated).async {
+        self.getAlbumThumbnail(
+          albumId: albumId,
+          mediumType: mediumType,
+          newest: newest,
+          width: width,
+          height: height,
+          highQuality: highQuality,
+          completion: { (data: Data?, error: Error?) -> Void in
+            DispatchQueue.main.async {
+              result(data)
+            }
+          }
+        )
+      }
     }
     else if(call.method == "getFile") {
       let arguments = call.arguments as! Dictionary<String, AnyObject>
       let mediumId = arguments["mediumId"] as! String
       let mimeType = arguments["mimeType"] as? String
-      getFile(
-        mediumId: mediumId,
-        mimeType: mimeType,
-        completion: { (filepath: String?, error: Error?) -> Void in
-          result(filepath?.replacingOccurrences(of: "file://", with: ""))
-        }
-      )
+      DispatchQueue.global(qos: .userInitiated).async {
+        self.getFile(
+          mediumId: mediumId,
+          mimeType: mimeType,
+          completion: { (filepath: String?, error: Error?) -> Void in
+            DispatchQueue.main.async {
+              result(filepath?.replacingOccurrences(of: "file://", with: ""))
+            }
+          }
+        )
+      }
     }
     else if(call.method == "deleteMedium") {
       let arguments = call.arguments as! Dictionary<String, AnyObject>
       let mediumId = arguments["mediumId"] as! String
-      deleteMedium(
-        mediumId: mediumId,
-        completion: { (success: Bool, error: Error?) -> Void in
-          result(success)
-        }
-      )
+      DispatchQueue.global(qos: .userInitiated).async {
+        self.deleteMedium(
+          mediumId: mediumId,
+          completion: { (success: Bool, error: Error?) -> Void in
+            DispatchQueue.main.async {
+              result(success)
+            }
+          }
+        )
+      }
     }
     else if(call.method == "cleanCache") {
-      cleanCache()
-      result(nil)
+      DispatchQueue.global(qos: .utility).async {
+        self.cleanCache()
+        DispatchQueue.main.async {
+          result(nil)
+        }
+      }
     }
     else {
       result(FlutterMethodNotImplemented)
@@ -392,35 +428,33 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
         let options = PHImageRequestOptions()
         options.isSynchronous = false
         options.version = .current
-        options.deliveryMode = .highQualityFormat
+        options.deliveryMode = .fastFormat
         options.isNetworkAccessAllowed = true
 
         manager.requestImageData(
           for: asset,
           options: options,
           resultHandler: { (data: Data?, uti: String?, orientation, info) in
-            DispatchQueue.main.async(execute: {
-              guard let imageData = data else {
-                completion(nil, NSError(domain: "photo_gallery", code: 404, userInfo: nil))
+            guard let imageData = data else {
+              completion(nil, NSError(domain: "photo_gallery", code: 404, userInfo: nil))
+              return
+            }
+            guard let assetUTI = uti else {
+              completion(nil, NSError(domain: "photo_gallery", code: 404, userInfo: nil))
+              return
+            }
+            if mimeType != nil {
+              let type = self.extractMimeTypeFromUTI(uti: assetUTI)
+              if type != mimeType {
+                let path = self.cacheImage(asset: asset, data: imageData, mimeType: mimeType!)
+                completion(path, NSError(domain: "photo_gallery", code: 404, userInfo: nil))
                 return
               }
-              guard let assetUTI = uti else {
-                completion(nil, NSError(domain: "photo_gallery", code: 404, userInfo: nil))
-                return
-              }
-              if mimeType != nil {
-                let type = self.extractMimeTypeFromUTI(uti: assetUTI)
-                if type != mimeType {
-                  let path = self.cacheImage(asset: asset, data: imageData, mimeType: mimeType!)
-                  completion(path, NSError(domain: "photo_gallery", code: 404, userInfo: nil))
-                  return
-                }
-              }
-              let fileExt = self.extractFileExtensionFromUTI(uti: assetUTI)
-              let filepath = self.exportPathForAsset(asset: asset, ext: fileExt)
-              try! imageData.write(to: filepath, options: .atomic)
-              completion(filepath.absoluteString, nil)
-            })
+            }
+            let fileExt = self.extractFileExtensionFromUTI(uti: assetUTI)
+            let filepath = self.exportPathForAsset(asset: asset, ext: fileExt)
+            try! imageData.write(to: filepath, options: .atomic)
+            completion(filepath.absoluteString, nil)
           }
         )
       } else if(asset.mediaType == PHAssetMediaType.video || asset.mediaType == PHAssetMediaType.audio) {
@@ -433,18 +467,16 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
           forVideo: asset,
           options: options,
           resultHandler: { (avAsset, avAudioMix, info) in
-            DispatchQueue.main.async(execute: {
-              do {
-                let avAsset = avAsset as? AVURLAsset
-                let data = try Data(contentsOf: avAsset!.url)
-                let fileExt = self.extractFileExtensionFromAsset(asset: asset)
-                let filepath = self.exportPathForAsset(asset: asset, ext: fileExt)
-                try! data.write(to: filepath, options: .atomic)
-                completion(filepath.absoluteString, nil)
-              } catch {
-                completion(nil, NSError(domain: "photo_gallery", code: 500, userInfo: nil))
-              }
-            })
+            do {
+              let avAsset = avAsset as? AVURLAsset
+              let data = try Data(contentsOf: avAsset!.url)
+              let fileExt = self.extractFileExtensionFromAsset(asset: asset)
+              let filepath = self.exportPathForAsset(asset: asset, ext: fileExt)
+              try! data.write(to: filepath, options: .atomic)
+              completion(filepath.absoluteString, nil)
+            } catch {
+              completion(nil, NSError(domain: "photo_gallery", code: 500, userInfo: nil))
+            }
           }
         )
       }
