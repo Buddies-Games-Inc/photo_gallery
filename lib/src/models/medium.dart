@@ -41,6 +41,12 @@ class Medium {
   /// The date at which the photo or video was modified.
   final DateTime? modifiedDate;
 
+  /// The latitude of the photo or video.
+  final double? latitude;
+
+  /// The longitude of the photo or video.
+  final double? longitude;
+
   /// Creates a medium from platform channel protocol.
   Medium.fromJson(dynamic json)
       : id = json["id"],
@@ -53,6 +59,8 @@ class Medium {
         orientation = json["orientation"],
         mimeType = json["mimeType"],
         duration = json['duration'] ?? 0,
+        latitude = json['latitude'],
+        longitude = json['longitude'],
         creationDate = json['creationDate'] != null
             ? DateTime.fromMillisecondsSinceEpoch(json['creationDate'])
             : null,
@@ -96,6 +104,8 @@ class Medium {
           height == other.height &&
           orientation == other.orientation &&
           mimeType == other.mimeType &&
+          latitude == other.latitude &&
+          longitude == other.longitude &&
           creationDate == other.creationDate &&
           modifiedDate == other.modifiedDate;
 
@@ -109,6 +119,8 @@ class Medium {
       height.hashCode ^
       orientation.hashCode ^
       mimeType.hashCode ^
+      latitude.hashCode ^
+      longitude.hashCode ^
       creationDate.hashCode ^
       modifiedDate.hashCode;
 
@@ -122,6 +134,8 @@ class Medium {
         'height: $height, '
         'orientation: $orientation, '
         'mimeType: $mimeType, '
+        'latitude: $latitude, '
+        'longitude: $longitude, '
         'creationDate: $creationDate, '
         'modifiedDate: $modifiedDate}';
   }

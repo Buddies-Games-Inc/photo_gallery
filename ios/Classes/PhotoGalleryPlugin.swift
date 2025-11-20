@@ -528,11 +528,13 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
       "orientation": orientation,
       "duration": NSInteger(asset.duration * 1000),
       "creationDate": (asset.creationDate != nil) ? NSInteger(asset.creationDate!.timeIntervalSince1970 * 1000) : nil,
-      "modifiedDate": (asset.modificationDate != nil) ? NSInteger(asset.modificationDate!.timeIntervalSince1970 * 1000) : nil
+      "modifiedDate": (asset.modificationDate != nil) ? NSInteger(asset.modificationDate!.timeIntervalSince1970 * 1000) : nil,
+      "latitude": asset.location?.coordinate.latitude,
+      "longitude": asset.location?.coordinate.longitude
     ]
   }
 
-  private func getMediumFromAssetLightWeight(asset: PHAsset) -> [String: Any?] {
+  private func getMediumFromAssetLightWeight(asset: PHAsset) -> [String: Any?] { 
     return [
       "id": asset.localIdentifier,
       "mediumType": toDartMediumType(value: asset.mediaType),
@@ -540,7 +542,9 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
       "width": asset.pixelWidth,
       "duration": NSInteger(asset.duration * 1000),
       "creationDate": (asset.creationDate != nil) ? NSInteger(asset.creationDate!.timeIntervalSince1970 * 1000) : nil,
-      "modifiedDate": (asset.modificationDate != nil) ? NSInteger(asset.modificationDate!.timeIntervalSince1970 * 1000) : nil
+      "modifiedDate": (asset.modificationDate != nil) ? NSInteger(asset.modificationDate!.timeIntervalSince1970 * 1000) : nil,
+      "latitude": asset.location?.coordinate.latitude,
+      "longitude": asset.location?.coordinate.longitude
     ]
   }
 

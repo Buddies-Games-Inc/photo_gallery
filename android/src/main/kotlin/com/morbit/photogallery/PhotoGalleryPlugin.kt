@@ -56,7 +56,9 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             MediaStore.Images.Media.ORIENTATION,
             MediaStore.Images.Media.MIME_TYPE,
             MediaStore.Images.Media.DATE_ADDED,
-            MediaStore.Images.Media.DATE_MODIFIED
+            MediaStore.Images.Media.DATE_MODIFIED,
+            MediaStore.Images.Media.LATITUDE,
+            MediaStore.Images.Media.LONGITUDE
         )
 
         val imageBriefMetadataProjection = arrayOf(
@@ -65,7 +67,9 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             MediaStore.Images.Media.HEIGHT,
             MediaStore.Images.Media.ORIENTATION,
             MediaStore.Images.Media.DATE_ADDED,
-            MediaStore.Images.Media.DATE_MODIFIED
+            MediaStore.Images.Media.DATE_MODIFIED,
+            MediaStore.Images.Media.LATITUDE,
+            MediaStore.Images.Media.LONGITUDE
         )
 
         val videoMetadataProjection = arrayOf(
@@ -78,7 +82,9 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             MediaStore.Video.Media.MIME_TYPE,
             MediaStore.Video.Media.DURATION,
             MediaStore.Video.Media.DATE_ADDED,
-            MediaStore.Video.Media.DATE_MODIFIED
+            MediaStore.Video.Media.DATE_MODIFIED,
+            MediaStore.Video.Media.LATITUDE,
+            MediaStore.Video.Media.LONGITUDE
         )
 
         val videoBriefMetadataProjection = arrayOf(
@@ -87,7 +93,9 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             MediaStore.Video.Media.HEIGHT,
             MediaStore.Video.Media.DURATION,
             MediaStore.Video.Media.DATE_ADDED,
-            MediaStore.Video.Media.DATE_MODIFIED
+            MediaStore.Video.Media.DATE_MODIFIED,
+            MediaStore.Video.Media.LATITUDE,
+            MediaStore.Video.Media.LONGITUDE
         )
     }
 
@@ -989,6 +997,8 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         val mimeColumn = cursor.getColumnIndex(MediaStore.Images.Media.MIME_TYPE)
         val dateAddedColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATE_ADDED)
         val dateModifiedColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATE_MODIFIED)
+        val latitudeColumn = cursor.getColumnIndex(MediaStore.Images.Media.LATITUDE)
+        val longitudeColumn = cursor.getColumnIndex(MediaStore.Images.Media.LONGITUDE)
 
         val id = cursor.getLong(idColumn)
         val filename = cursor.getString(filenameColumn)
@@ -998,6 +1008,8 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         val size = cursor.getLong(sizeColumn)
         val orientation = cursor.getLong(orientationColumn)
         val mimeType = cursor.getString(mimeColumn)
+        val latitude = cursor.getDouble(latitudeColumn)
+        val longitude = cursor.getDouble(longitudeColumn)
         var dateAdded: Long? = null
         if (cursor.getType(dateAddedColumn) == FIELD_TYPE_INTEGER) {
             dateAdded = cursor.getLong(dateAddedColumn) * 1000
@@ -1018,7 +1030,9 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             "orientation" to orientationDegree2Value(orientation),
             "mimeType" to mimeType,
             "creationDate" to dateAdded,
-            "modifiedDate" to dateModified
+            "modifiedDate" to dateModified,
+            "latitude" to latitude,
+            "longitude" to longitude
         )
     }
 
@@ -1029,6 +1043,8 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         val orientationColumn = cursor.getColumnIndex(MediaStore.Images.Media.ORIENTATION)
         val dateAddedColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATE_ADDED)
         val dateModifiedColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATE_MODIFIED)
+        val latitudeColumn = cursor.getColumnIndex(MediaStore.Images.Media.LATITUDE)
+        val longitudeColumn = cursor.getColumnIndex(MediaStore.Images.Media.LONGITUDE)
 
         val id = cursor.getLong(idColumn)
         val width = cursor.getLong(widthColumn)
@@ -1042,6 +1058,8 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         if (cursor.getType(dateModifiedColumn) == FIELD_TYPE_INTEGER) {
             dateModified = cursor.getLong(dateModifiedColumn) * 1000
         }
+        val latitude = cursor.getDouble(latitudeColumn)
+        val longitude = cursor.getDouble(longitudeColumn)
 
         return mapOf(
             "id" to id.toString(),
@@ -1050,7 +1068,9 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             "height" to height,
             "orientation" to orientationDegree2Value(orientation),
             "creationDate" to dateAdded,
-            "modifiedDate" to dateModified
+            "modifiedDate" to dateModified,
+            "latitude" to latitude,
+            "longitude" to longitude
         )
     }
 
@@ -1065,6 +1085,8 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         val durationColumn = cursor.getColumnIndex(MediaStore.Video.Media.DURATION)
         val dateAddedColumn = cursor.getColumnIndex(MediaStore.Video.Media.DATE_ADDED)
         val dateModifiedColumn = cursor.getColumnIndex(MediaStore.Video.Media.DATE_MODIFIED)
+        val latitudeColumn = cursor.getColumnIndex(MediaStore.Video.Media.LATITUDE)
+        val longitudeColumn = cursor.getColumnIndex(MediaStore.Video.Media.LONGITUDE)
 
         val id = cursor.getLong(idColumn)
         val filename = cursor.getString(filenameColumn)
@@ -1082,6 +1104,8 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         if (cursor.getType(dateModifiedColumn) == FIELD_TYPE_INTEGER) {
             dateModified = cursor.getLong(dateModifiedColumn) * 1000
         }
+        val latitude = cursor.getDouble(latitudeColumn)
+        val longitude = cursor.getDouble(longitudeColumn)
 
         return mapOf(
             "id" to id.toString(),
@@ -1094,7 +1118,9 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             "mimeType" to mimeType,
             "duration" to duration,
             "creationDate" to dateAdded,
-            "modifiedDate" to dateModified
+            "modifiedDate" to dateModified,
+            "latitude" to latitude,
+            "longitude" to longitude
         )
     }
 
@@ -1105,6 +1131,8 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         val durationColumn = cursor.getColumnIndex(MediaStore.Video.Media.DURATION)
         val dateAddedColumn = cursor.getColumnIndex(MediaStore.Video.Media.DATE_ADDED)
         val dateModifiedColumn = cursor.getColumnIndex(MediaStore.Video.Media.DATE_MODIFIED)
+        val latitudeColumn = cursor.getColumnIndex(MediaStore.Video.Media.LATITUDE)
+        val longitudeColumn = cursor.getColumnIndex(MediaStore.Video.Media.LONGITUDE)
 
         val id = cursor.getLong(idColumn)
         val width = cursor.getLong(widthColumn)
@@ -1118,6 +1146,8 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         if (cursor.getType(dateModifiedColumn) == FIELD_TYPE_INTEGER) {
             dateModified = cursor.getLong(dateModifiedColumn) * 1000
         }
+        val latitude = cursor.getDouble(latitudeColumn)
+        val longitude = cursor.getDouble(longitudeColumn)
 
         return mapOf(
             "id" to id.toString(),
@@ -1126,7 +1156,9 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             "height" to height,
             "duration" to duration,
             "creationDate" to dateAdded,
-            "modifiedDate" to dateModified
+            "modifiedDate" to dateModified,
+            "latitude" to latitude,
+            "longitude" to longitude
         )
     }
 
