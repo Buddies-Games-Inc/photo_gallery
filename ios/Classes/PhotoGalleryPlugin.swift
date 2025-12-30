@@ -468,8 +468,14 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
           options: options,
           resultHandler: { (avAsset, avAudioMix, info) in
             do {
-              let avAsset = avAsset as? AVURLAsset
-              let data = try Data(contentsOf: avAsset!.url)
+              guard let avAsset = avAsset as? AVUrlAsset else {
+                let errorInfo: [String: Any] = [
+                  "error": "Failed to cast avAsset to AVUrlAsset"
+                ]
+                completion(nil, NSError(domain: "photo_gallery", code: 500, userInfo: errorInfo))
+                return
+              }
+              let data = try Data(contentsOf: avAsset.url)
               let fileExt = self.extractFileExtensionFromAsset(asset: asset)
               let filepath = self.exportPathForAsset(asset: asset, ext: fileExt)
               try! data.write(to: filepath, options: .atomic)
