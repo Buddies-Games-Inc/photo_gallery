@@ -468,7 +468,7 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
           options: options,
           resultHandler: { (avAsset, avAudioMix, info) in
             do {
-              guard let avAsset = avAsset as? AVUrlAsset else {
+              guard let avAsset = avAsset as? AVURLAsset else {
                 let errorInfo: [String: Any] = [
                   "error": "Failed to cast avAsset to AVUrlAsset"
                 ]
