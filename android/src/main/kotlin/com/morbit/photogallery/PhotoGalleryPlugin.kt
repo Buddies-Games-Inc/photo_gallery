@@ -518,33 +518,69 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
         val bitmap: Bitmap? =
                 this.context.run {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         try {
-                            val widthSize = width ?: if (highQuality == true) 512 else 96
-                            val heightSize = height ?: if (highQuality == true) 384 else 96
-                            this.contentResolver.loadThumbnail(
-                                    ContentUris.withAppendedId(
-                                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                                            mediumId.toLong()
-                                    ),
-                                    Size(widthSize, heightSize),
-                                    null
-                            )
+                            // Decode full image, then scale
+                            val source =
+                                    ImageDecoder.createSource(
+                                            this.contentResolver,
+                                            ContentUris.withAppendedId(
+                                                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                                                    mediumId.toLong()
+                                            )
+                                    )
+                            val decodedBitmap =
+                                    ImageDecoder.decodeBitmap(source) { decoder, info, source ->
+                                        // Calculate target size
+                                        val widthSize =
+                                                width ?: if (highQuality == true) 2048 else 512
+                                        val heightSize =
+                                                height ?: if (highQuality == true) 1536 else 512
+
+                                        // Get original dimensions
+                                        val originalWidth = info.size.width
+                                        val originalHeight = info.size.height
+
+                                        // Calculate scale to fit within target while maintaining
+                                        // aspect ratio
+                                        val scale =
+                                                minOf(
+                                                                widthSize.toFloat() / originalWidth,
+                                                                heightSize.toFloat() /
+                                                                        originalHeight
+                                                        )
+                                                        .coerceAtMost(1.0f) // Don't upscale
+
+                                        decoder.setTargetSize(
+                                                (originalWidth * scale).toInt(),
+                                                (originalHeight * scale).toInt()
+                                        )
+                                    }
+                            decodedBitmap
                         } catch (e: Exception) {
                             null
                         }
                     } else {
-                        val kind =
-                                if (highQuality == true) MediaStore.Images.Thumbnails.MINI_KIND
-                                else MediaStore.Images.Thumbnails.MICRO_KIND
-                        MediaStore.Images.Thumbnails.getThumbnail(
-                                this.contentResolver,
-                                mediumId.toLong(),
-                                kind,
-                                null
-                        )
+                        // For older Android, use MediaStore.Images.Media.getBitmap
+                        try {
+                            val fullBitmap =
+                                    MediaStore.Images.Media.getBitmap(
+                                            this.contentResolver,
+                                            ContentUris.withAppendedId(
+                                                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                                                    mediumId.toLong()
+                                            )
+                                    )
+                            // Scale down if needed
+                            val widthSize = width ?: if (highQuality == true) 2048 else 512
+                            val heightSize = height ?: if (highQuality == true) 1536 else 512
+                            scaleBitmap(fullBitmap, widthSize, heightSize)
+                        } catch (e: Exception) {
+                            null
+                        }
                     }
                 }
+
         bitmap?.run {
             ByteArrayOutputStream().use { stream ->
                 this.compress(Bitmap.CompressFormat.JPEG, 100, stream)
@@ -553,6 +589,23 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         }
 
         return byteArray
+    }
+
+    private fun scaleBitmap(bitmap: Bitmap, maxWidth: Int, maxHeight: Int): Bitmap {
+        val width = bitmap.width
+        val height = bitmap.height
+        val max = maxOf(width, height)
+        val targetMax = maxOf(maxWidth, maxHeight)
+
+        if (max <= targetMax) {
+            return bitmap // No scaling needed
+        }
+
+        val scale = targetMax.toFloat() / max
+        val newWidth = (width * scale).toInt()
+        val newHeight = (height * scale).toInt()
+
+        return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
     }
 
     private fun getVideoThumbnail(
