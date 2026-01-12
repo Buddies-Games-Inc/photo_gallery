@@ -197,6 +197,11 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 val mimeType = call.argument<String>("mimeType")
                 executor.submit { result.success(getFile(mediumId!!, mediumType, mimeType)) }
             }
+            "getFilePath" -> {
+                val mediumId = call.argument<String>("mediumId")
+                val mediumType = call.argument<String>("mediumType")
+                executor.submit { result.success(getFilePath(mediumId!!, mediumType)) }
+            }
             "deleteMedium" -> {
                 val mediumId = call.argument<String>("mediumId")
                 val mediumType = call.argument<String>("mediumType")
