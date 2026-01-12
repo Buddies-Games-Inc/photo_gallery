@@ -28,14 +28,18 @@ Future<dynamic> mockMethodCallHandler(MethodCall call) async {
   } else if (call.method == "getMedium") {
     String mediumId = call.arguments['mediumId'];
     MediumType? mediumType = jsonToMediumType(call.arguments['mediumType']);
-    dynamic media =
-        Generator.generateMediaJson(mediumId: mediumId, mediumType: mediumType);
+    dynamic media = Generator.generateMediaJson(
+      mediumId: mediumId,
+      mediumType: mediumType,
+    );
     return media;
   } else if (call.method == "getThumbnail") {
     String mediumId = call.arguments['mediumId'];
     MediumType? mediumType = jsonToMediumType(call.arguments['mediumType']);
     dynamic thumbnail = Generator.generateMockThumbnail(
-        mediumId: mediumId, mediumType: mediumType);
+      mediumId: mediumId,
+      mediumType: mediumType,
+    );
     return thumbnail;
   } else if (call.method == "getAlbumThumbnail") {
     String albumId = call.arguments['albumId'];
@@ -44,8 +48,18 @@ Future<dynamic> mockMethodCallHandler(MethodCall call) async {
   } else if (call.method == "getFile") {
     String mediumId = call.arguments['mediumId'];
     MediumType? mediumType = jsonToMediumType(call.arguments['mediumType']);
-    dynamic path =
-        Generator.generateFilePath(mediumId: mediumId, mediumType: mediumType);
+    dynamic path = Generator.generateFilePath(
+      mediumId: mediumId,
+      mediumType: mediumType,
+    );
+    return path;
+  } else if (call.method == "getFilePath") {
+    String mediumId = call.arguments['mediumId'];
+    MediumType? mediumType = jsonToMediumType(call.arguments['mediumType']);
+    dynamic path = Generator.generateFilePath(
+      mediumId: mediumId,
+      mediumType: mediumType,
+    );
     return path;
   }
   throw UnimplementedError();

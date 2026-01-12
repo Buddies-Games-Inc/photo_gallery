@@ -121,6 +121,16 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
         )
       }
     }
+    else if(call.method == "getFilePath") {
+      let arguments = call.arguments as! Dictionary<String, AnyObject>
+      let mediumId = arguments["mediumId"] as! String
+      DispatchQueue.global(qos: .userInitiated).async {
+        let filepath = self.getFilePath(mediumId: mediumId)
+        DispatchQueue.main.async {
+          result(filepath?.replacingOccurrences(of: "file://", with: ""))
+        }
+      }
+    }
     else if(call.method == "deleteMedium") {
       let arguments = call.arguments as! Dictionary<String, AnyObject>
       let mediumId = arguments["mediumId"] as! String
@@ -552,6 +562,48 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
       "latitude": asset.location?.coordinate.latitude,
       "longitude": asset.location?.coordinate.longitude
     ]
+  }
+
+  private func getFilePath(mediumId: String) -> String? {
+    let fetchOptions = PHFetchOptions()
+    if #available(iOS 9, *) {
+      fetchOptions.fetchLimit = 1
+    }
+    let assets: PHFetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [mediumId], options: fetchOptions)
+    
+    if assets.count <= 0 {
+      return nil
+    }
+    
+    let asset: PHAsset = assets[0]
+    
+    // First, check if file is already cached
+    let cachePath = self.cachePath()
+    let fileManager = FileManager.default
+    
+    // Try common extensions
+    let extensions = [".jpeg", ".jpg", ".png", ".heic", ".mov", ".mp4", ".m4v"]
+    for ext in extensions {
+      let sanitizedId = mediumId
+        .replacingOccurrences(of: "/", with: "__")
+        .replacingOccurrences(of: "\\", with: "__")
+      let cachedPath = cachePath.appendingPathComponent(sanitizedId + ext)
+      if fileManager.fileExists(atPath: cachedPath.path) {
+        return cachedPath.absoluteString
+      }
+    }
+    
+    // If not cached, try to get the original file path using PHAssetResource
+    if #available(iOS 9, *) {
+      let resources = PHAssetResource.assetResources(for: asset)
+      if let resource = resources.first {
+        // For iOS, we can't directly access the original file path without exporting
+        // Return nil to indicate the file needs to be exported first via getFile
+        return nil
+      }
+    }
+    
+    return nil
   }
 
   private func exportPathForAsset(asset: PHAsset, ext: String) -> URL {

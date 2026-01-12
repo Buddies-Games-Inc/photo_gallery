@@ -139,6 +139,21 @@ class PhotoGallery {
     return File(path);
   }
 
+  /// Get file path by medium id (efficient, returns only the path string)
+  /// mediumId: the identifier of medium
+  /// mediumType: the type of medium
+  /// Returns the file path as a string, or null if not found
+  static Future<String?> getFilePath({
+    required String mediumId,
+    MediumType? mediumType,
+  }) async {
+    final path = await _channel.invokeMethod('getFilePath', {
+      'mediumId': mediumId,
+      'mediumType': mediumTypeToJson(mediumType),
+    }) as String?;
+    return path;
+  }
+
   /// Delete medium by medium id
   /// mediumId: the identifier of medium
   /// mediumType: the type of medium

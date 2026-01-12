@@ -518,69 +518,33 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
         val bitmap: Bitmap? =
                 this.context.run {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         try {
-                            // Decode full image, then scale
-                            val source =
-                                    ImageDecoder.createSource(
-                                            this.contentResolver,
-                                            ContentUris.withAppendedId(
-                                                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                                                    mediumId.toLong()
-                                            )
-                                    )
-                            val decodedBitmap =
-                                    ImageDecoder.decodeBitmap(source) { decoder, info, source ->
-                                        // Calculate target size
-                                        val widthSize =
-                                                width ?: if (highQuality == true) 2048 else 512
-                                        val heightSize =
-                                                height ?: if (highQuality == true) 1536 else 512
-
-                                        // Get original dimensions
-                                        val originalWidth = info.size.width
-                                        val originalHeight = info.size.height
-
-                                        // Calculate scale to fit within target while maintaining
-                                        // aspect ratio
-                                        val scale =
-                                                minOf(
-                                                                widthSize.toFloat() / originalWidth,
-                                                                heightSize.toFloat() /
-                                                                        originalHeight
-                                                        )
-                                                        .coerceAtMost(1.0f) // Don't upscale
-
-                                        decoder.setTargetSize(
-                                                (originalWidth * scale).toInt(),
-                                                (originalHeight * scale).toInt()
-                                        )
-                                    }
-                            decodedBitmap
+                            val widthSize = width ?: if (highQuality == true) 512 else 96
+                            val heightSize = height ?: if (highQuality == true) 384 else 96
+                            this.contentResolver.loadThumbnail(
+                                    ContentUris.withAppendedId(
+                                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                                            mediumId.toLong()
+                                    ),
+                                    Size(widthSize, heightSize),
+                                    null
+                            )
                         } catch (e: Exception) {
                             null
                         }
                     } else {
-                        // For older Android, use MediaStore.Images.Media.getBitmap
-                        try {
-                            val fullBitmap =
-                                    MediaStore.Images.Media.getBitmap(
-                                            this.contentResolver,
-                                            ContentUris.withAppendedId(
-                                                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                                                    mediumId.toLong()
-                                            )
-                                    )
-                            // Scale down if needed
-                            val widthSize = width ?: if (highQuality == true) 2048 else 512
-                            val heightSize = height ?: if (highQuality == true) 1536 else 512
-                            scaleBitmap(fullBitmap, widthSize, heightSize)
-                        } catch (e: Exception) {
-                            null
-                        }
+                        val kind =
+                                if (highQuality == true) MediaStore.Images.Thumbnails.MINI_KIND
+                                else MediaStore.Images.Thumbnails.MICRO_KIND
+                        MediaStore.Images.Thumbnails.getThumbnail(
+                                this.contentResolver,
+                                mediumId.toLong(),
+                                kind,
+                                null
+                        )
                     }
                 }
-
         bitmap?.run {
             ByteArrayOutputStream().use { stream ->
                 this.compress(Bitmap.CompressFormat.JPEG, 100, stream)
@@ -589,23 +553,6 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         }
 
         return byteArray
-    }
-
-    private fun scaleBitmap(bitmap: Bitmap, maxWidth: Int, maxHeight: Int): Bitmap {
-        val width = bitmap.width
-        val height = bitmap.height
-        val max = maxOf(width, height)
-        val targetMax = maxOf(maxWidth, maxHeight)
-
-        if (max <= targetMax) {
-            return bitmap // No scaling needed
-        }
-
-        val scale = targetMax.toFloat() / max
-        val newWidth = (width * scale).toInt()
-        val newHeight = (height * scale).toInt()
-
-        return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
     }
 
     private fun getVideoThumbnail(
@@ -938,6 +885,64 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             else -> {
                 getImageFile(mediumId, mimeType = mimeType) ?: getVideoFile(mediumId)
             }
+        }
+    }
+
+    private fun getFilePath(mediumId: String, mediumType: String?): String? {
+        return when (mediumType) {
+            imageType -> {
+                getImageFilePath(mediumId)
+            }
+            videoType -> {
+                getVideoFilePath(mediumId)
+            }
+            else -> {
+                getImageFilePath(mediumId) ?: getVideoFilePath(mediumId)
+            }
+        }
+    }
+
+    private fun getImageFilePath(mediumId: String): String? {
+        return this.context.run {
+            val imageCursor =
+                    this.contentResolver.query(
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                            arrayOf(MediaStore.Images.Media.DATA),
+                            "${MediaStore.Images.Media._ID} = ?",
+                            arrayOf(mediumId),
+                            null
+                    )
+
+            imageCursor?.use { cursor ->
+                if (cursor.moveToNext()) {
+                    val dataColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATA)
+                    return@run cursor.getString(dataColumn)
+                }
+            }
+
+            return@run null
+        }
+    }
+
+    private fun getVideoFilePath(mediumId: String): String? {
+        return this.context.run {
+            val videoCursor =
+                    this.contentResolver.query(
+                            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                            arrayOf(MediaStore.Video.Media.DATA),
+                            "${MediaStore.Video.Media._ID} = ?",
+                            arrayOf(mediumId),
+                            null
+                    )
+
+            videoCursor?.use { cursor ->
+                if (cursor.moveToNext()) {
+                    val dataColumn = cursor.getColumnIndex(MediaStore.Video.Media.DATA)
+                    return@run cursor.getString(dataColumn)
+                }
+            }
+
+            return@run null
         }
     }
 
