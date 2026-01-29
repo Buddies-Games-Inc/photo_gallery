@@ -41,10 +41,10 @@ class Medium {
   /// The date at which the photo or video was modified.
   final DateTime? modifiedDate;
 
-  /// The latitude of the photo or video.
+  /// The latitude of the photo or video. Works only on iOS platform.
   final double? latitude;
 
-  /// The longitude of the photo or video.
+  /// The longitude of the photo or video. Works only on iOS platform.
   final double? longitude;
 
   /// Creates a medium from platform channel protocol.

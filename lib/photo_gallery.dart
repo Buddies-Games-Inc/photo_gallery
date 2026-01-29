@@ -139,6 +139,25 @@ class PhotoGallery {
     return File(path);
   }
 
+  /// Get GPS coordinates from image file EXIF data.
+  /// filePath: path to the image file
+  /// Returns latitude and longitude, or null if not available or on non-Android platforms.
+  static Future<({double latitude, double longitude})?> getCoordinates(String filePath) async {
+    if (!Platform.isAndroid) return null;
+    final result = await _channel.invokeMethod<Map<Object?, Object?>>(
+      'getCoordinates',
+      {'filePath': filePath},
+    );
+    if (result == null) return null;
+    final lat = result['latitude'];
+    final lng = result['longitude'];
+    if (lat == null || lng == null) return null;
+    return (
+      latitude: (lat as num).toDouble(),
+      longitude: (lng as num).toDouble(),
+    );
+  }
+
   /// Get file path by medium id (efficient, returns only the path string)
   /// mediumId: the identifier of medium
   /// mediumType: the type of medium

@@ -131,6 +131,9 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
         }
       }
     }
+    else if(call.method == "getCoordinates") {
+      result(nil)
+    }
     else if(call.method == "deleteMedium") {
       let arguments = call.arguments as! Dictionary<String, AnyObject>
       let mediumId = arguments["mediumId"] as! String
