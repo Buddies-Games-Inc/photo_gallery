@@ -132,7 +132,7 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
       }
     }
     else if(call.method == "getCoordinates") {
-      result(nil)
+      result(nil)  // Android only
     }
     else if(call.method == "deleteMedium") {
       let arguments = call.arguments as! Dictionary<String, AnyObject>

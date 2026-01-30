@@ -196,8 +196,9 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 executor.submit { result.success(getFilePath(mediumId!!, mediumType)) }
             }
             "getCoordinates" -> {
-                val filePath = call.argument<String>("filePath")
-                executor.submit { result.success(getCoordinates(filePath!!)) }
+                val mediumId = call.argument<String>("mediumId")
+                val mediumType = call.argument<String>("mediumType")
+                executor.submit { result.success(getCoordinates(mediumId!!, mediumType)) }
             }
             "deleteMedium" -> {
                 val mediumId = call.argument<String>("mediumId")
@@ -890,7 +891,8 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         }
     }
 
-    private fun getCoordinates(filePath: String): Map<String, Double>? {
+    private fun getCoordinates(mediumId: String, mediumType: String?): Map<String, Double>? {
+        val filePath = getFilePath(mediumId, mediumType) ?: return null
         return try {
             val exif = ExifInterface(filePath)
             val output = FloatArray(2)

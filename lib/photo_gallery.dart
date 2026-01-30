@@ -140,13 +140,17 @@ class PhotoGallery {
   }
 
   /// Get GPS coordinates from image file EXIF data.
-  /// filePath: path to the image file
+  /// mediumId: the identifier of medium
+  /// mediumType: the type of medium (optional)
   /// Returns latitude and longitude, or null if not available or on non-Android platforms.
-  static Future<({double latitude, double longitude})?> getCoordinates(String filePath) async {
+  static Future<({double latitude, double longitude})?> getCoordinates({
+    required String mediumId,
+    MediumType? mediumType,
+  }) async {
     if (!Platform.isAndroid) return null;
     final result = await _channel.invokeMethod<Map<Object?, Object?>>(
       'getCoordinates',
-      {'filePath': filePath},
+      {'mediumId': mediumId, 'mediumType': mediumTypeToJson(mediumType)},
     );
     if (result == null) return null;
     final lat = result['latitude'];
