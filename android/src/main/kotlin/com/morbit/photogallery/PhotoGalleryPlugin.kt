@@ -10,9 +10,9 @@ import android.database.Cursor.FIELD_TYPE_INTEGER
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.os.Build
-import android.media.ExifInterface
 import android.provider.MediaStore
 import android.util.Size
+import androidx.exifinterface.media.ExifInterface
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -891,15 +891,28 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         }
     }
 
+
     private fun getCoordinates(mediumId: String, mediumType: String?): Map<String, Double>? {
-        val filePath = getFilePath(mediumId, mediumType) ?: return null
+        val isImage = mediumType != videoType
+        val contentUri = if (isImage) {
+            ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, mediumId.toLong())
+        } else {
+            ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, mediumId.toLong())
+        }
         return try {
-            val exif = ExifInterface(filePath)
-            val output = FloatArray(2)
-            if (exif.getLatLong(output)) {
-                mapOf("latitude" to output[0].toDouble(), "longitude" to output[1].toDouble())
+            val uriWithLocation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                MediaStore.setRequireOriginal(contentUri)
             } else {
-                null
+                contentUri
+            }
+            context.contentResolver.openInputStream(uriWithLocation)?.use { inputStream ->
+                val exifInterface = ExifInterface(inputStream)
+                val output = exifInterface.latLong
+                if (output != null) {
+                    mapOf("latitude" to output[0].toDouble(), "longitude" to output[1].toDouble())
+                } else {
+                    null
+                }
             }
         } catch (_: Exception) {
             null
