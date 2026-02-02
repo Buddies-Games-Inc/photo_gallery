@@ -30,6 +30,10 @@ class ThumbnailProvider extends ImageProvider<ThumbnailProvider> {
   ImageStreamCompleter loadImage(key, decode) {
     return MultiFrameImageStreamCompleter(
       codec: _loadAsync(key, decode),
+      chunkEvents: Stream<ImageChunkEvent>.value(const ImageChunkEvent(
+        cumulativeBytesLoaded: 0,
+        expectedTotalBytes: 1,
+      )),
       scale: 1.0,
       informationCollector: () sync* {
         yield ErrorDescription('Id: $mediumId');
