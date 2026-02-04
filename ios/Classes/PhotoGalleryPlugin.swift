@@ -158,6 +158,16 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
         }
       }
     }
+    else if(call.method == "getCloudStatus") {
+      let arguments = call.arguments as! Dictionary<String, AnyObject>
+      let mediumIds = arguments["mediumIds"] as! [String]
+      DispatchQueue.global(qos: .userInitiated).async {
+        let status = self.getCloudStatus(mediumIds: mediumIds)
+        DispatchQueue.main.async {
+          result(status)
+        }
+      }
+    }
     else {
       result(FlutterMethodNotImplemented)
     }
@@ -779,5 +789,18 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
 
   private func cleanCache() {
     try? FileManager.default.removeItem(at: self.cachePath())
+  }
+
+  private func getCloudStatus(mediumIds: [String]) -> [String: Bool] {
+    var result = [String: Bool]()
+    
+    let fetchOptions = PHFetchOptions()
+    let assets = PHAsset.fetchAssets(withLocalIdentifiers: mediumIds, options: fetchOptions)
+    
+    assets.enumerateObjects { (asset, _, _) in
+      result[asset.localIdentifier] = self.isAssetLocallyAvailable(asset: asset)
+    }
+    
+    return result
   }
 }

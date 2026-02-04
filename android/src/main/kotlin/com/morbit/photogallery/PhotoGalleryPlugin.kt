@@ -209,6 +209,10 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             "cleanCache" -> {
                 executor.submit { result.success(cleanCache()) }
             }
+            "getCloudStatus" -> {
+                val mediumIds = call.argument<List<String>>("mediumIds")
+                executor.submit { result.success(getCloudStatus(mediumIds!!)) }
+            }
             else -> result.notImplemented()
         }
     }
@@ -1475,5 +1479,10 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private fun cleanCache() {
         val cachePath = getCachePath()
         cachePath.deleteRecursively()
+    }
+
+    private fun getCloudStatus(mediumIds: List<String>): Map<String, Boolean> {
+        // On Android, all media is always local (no iCloud equivalent)
+        return mediumIds.associateWith { true }
     }
 }

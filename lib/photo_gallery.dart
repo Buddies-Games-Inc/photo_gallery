@@ -59,7 +59,8 @@ class PhotoGallery {
       'lightWeight': lightWeight,
       'includeCloudStatus': includeCloudStatus,
     });
-    return MediaPage.fromJson(album, json, lightWeight: lightWeight, includeCloudStatus: includeCloudStatus);
+    return MediaPage.fromJson(album, json,
+        lightWeight: lightWeight, includeCloudStatus: includeCloudStatus);
   }
 
   /// Get medium metadata by medium id
@@ -196,5 +197,23 @@ class PhotoGallery {
   /// Clean medium file cache
   static Future<void> cleanCache() async {
     _channel.invokeMethod('cleanCache', {});
+  }
+
+  /// Check if media assets are stored locally on device.
+  /// Returns a map of media IDs to their local availability status.
+  /// On iOS, returns true if the asset is available locally, false if it needs to be downloaded from iCloud.
+  /// On Android, always returns true for all IDs.
+  ///
+  /// This is useful for checking cloud status on-demand for specific items
+  /// (e.g., only visible items) rather than checking all items during listing.
+  static Future<Map<String, bool>> getCloudStatus({
+    required List<String> mediumIds,
+  }) async {
+    final result =
+        await _channel.invokeMethod<Map<Object?, Object?>>('getCloudStatus', {
+      'mediumIds': mediumIds,
+    });
+    if (result == null) return {};
+    return result.map((key, value) => MapEntry(key as String, value as bool));
   }
 }
