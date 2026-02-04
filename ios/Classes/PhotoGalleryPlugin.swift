@@ -31,6 +31,7 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
       let skip = arguments["skip"] as? NSNumber
       let take = arguments["take"] as? NSNumber
       let lightWeight = arguments["lightWeight"] as? Bool
+      let includeCloudStatus = arguments["includeCloudStatus"] as? Bool
       DispatchQueue.global(qos: .userInitiated).async {
         let media = self.listMedia(
           albumId: albumId,
@@ -38,7 +39,8 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
           newest: newest,
           skip: skip,
           take: take,
-          lightWeight: lightWeight
+          lightWeight: lightWeight,
+          includeCloudStatus: includeCloudStatus
         )
         DispatchQueue.main.async {
           result(media)
@@ -252,7 +254,8 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
     newest: Bool,
     skip: NSNumber?,
     take: NSNumber?,
-    lightWeight: Bool? = false
+    lightWeight: Bool? = false,
+    includeCloudStatus: Bool? = false
   ) -> NSDictionary {
     let fetchOptions = PHFetchOptions()
     fetchOptions.predicate = predicateFromMediumType(mediumType: mediumType)
@@ -283,9 +286,9 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
       for index in start..<end {
         let asset = fetchResult.object(at: index) as PHAsset
         if(lightWeight == true) {
-          items.append(getMediumFromAssetLightWeight(asset: asset))
+          items.append(getMediumFromAssetLightWeight(asset: asset, includeCloudStatus: includeCloudStatus))
         } else {
-          items.append(getMediumFromAsset(asset: asset))
+          items.append(getMediumFromAsset(asset: asset, includeCloudStatus: includeCloudStatus))
         }
       }
     }
@@ -518,7 +521,7 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
     }
   }
 
-  private func getMediumFromAsset(asset: PHAsset) -> [String: Any?] {
+  private func getMediumFromAsset(asset: PHAsset, includeCloudStatus: Bool? = false) -> [String: Any?] {
     let filename = self.extractFilenameFromAsset(asset: asset)
     let mimeType = self.extractMimeTypeFromAsset(asset: asset)
     let resource = self.extractResourceFromAsset(asset: asset)
@@ -549,11 +552,12 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
       "creationDate": (asset.creationDate != nil) ? NSInteger(asset.creationDate!.timeIntervalSince1970 * 1000) : nil,
       "modifiedDate": (asset.modificationDate != nil) ? NSInteger(asset.modificationDate!.timeIntervalSince1970 * 1000) : nil,
       "latitude": asset.location?.coordinate.latitude,
-      "longitude": asset.location?.coordinate.longitude
+      "longitude": asset.location?.coordinate.longitude,
+      "isOnDevice": (includeCloudStatus == true) ? isAssetLocallyAvailable(asset: asset) : nil
     ]
   }
 
-  private func getMediumFromAssetLightWeight(asset: PHAsset) -> [String: Any?] { 
+  private func getMediumFromAssetLightWeight(asset: PHAsset, includeCloudStatus: Bool? = false) -> [String: Any?] { 
     return [
       "id": asset.localIdentifier,
       "mediumType": toDartMediumType(value: asset.mediaType),
@@ -563,7 +567,8 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
       "creationDate": (asset.creationDate != nil) ? NSInteger(asset.creationDate!.timeIntervalSince1970 * 1000) : nil,
       "modifiedDate": (asset.modificationDate != nil) ? NSInteger(asset.modificationDate!.timeIntervalSince1970 * 1000) : nil,
       "latitude": asset.location?.coordinate.latitude,
-      "longitude": asset.location?.coordinate.longitude
+      "longitude": asset.location?.coordinate.longitude,
+      "isOnDevice": (includeCloudStatus == true) ? isAssetLocallyAvailable(asset: asset) : nil
     ]
   }
 
@@ -733,6 +738,19 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
       return assetResource.value(forKey: "fileSize") as? Int64
     }
     return nil
+  }
+
+  private func isAssetLocallyAvailable(asset: PHAsset) -> Bool {
+    let resources = PHAssetResource.assetResources(for: asset)
+    guard let resource = resources.first else { return true }
+    
+    // Check using the locallyAvailable key from PHAssetResource
+    if let locallyAvailable = (resource as AnyObject).value(forKey: "locallyAvailable") as? Bool {
+      return locallyAvailable
+    }
+    
+    // Fallback: assume available if we can't determine
+    return true
   }
 
   private func cachePath() -> URL {

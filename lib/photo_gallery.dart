@@ -42,11 +42,13 @@ class PhotoGallery {
   /// skip: the number to skip when list media
   /// take: the number to return when list media
   /// lightWeight: whether to return brief information when list media
+  /// includeCloudStatus: whether to check if assets are stored locally (iOS only, slower)
   static Future<MediaPage> _listMedia({
     required Album album,
     int? skip,
     int? take,
     bool? lightWeight,
+    bool? includeCloudStatus,
   }) async {
     final json = await _channel.invokeMethod('listMedia', {
       'albumId': album.id,
@@ -55,8 +57,9 @@ class PhotoGallery {
       'skip': skip,
       'take': take,
       'lightWeight': lightWeight,
+      'includeCloudStatus': includeCloudStatus,
     });
-    return MediaPage.fromJson(album, json);
+    return MediaPage.fromJson(album, json, lightWeight: lightWeight, includeCloudStatus: includeCloudStatus);
   }
 
   /// Get medium metadata by medium id

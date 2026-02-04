@@ -31,16 +31,21 @@ class Album {
   ///
   /// Pagination can be controlled out of [skip] (defaults to `0`) and
   /// [take] (defaults to `<total>`).
+  /// [includeCloudStatus] when true, checks if assets are stored locally on device
+  /// (iOS only - slower as it requires checking each asset). When false or null,
+  /// [Medium.isOnDevice] will be null on iOS and true on Android.
   Future<MediaPage> listMedia({
     int? skip,
     int? take,
     bool? lightWeight,
+    bool? includeCloudStatus,
   }) {
     return PhotoGallery._listMedia(
       album: this,
       skip: skip,
       take: take,
       lightWeight: lightWeight,
+      includeCloudStatus: includeCloudStatus,
     );
   }
 

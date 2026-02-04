@@ -15,6 +15,9 @@ class MediaPage {
   /// Whether using light weight option
   final bool? lightWeight;
 
+  /// Whether to include cloud status check
+  final bool? includeCloudStatus;
+
   /// The end index in the album.
   int get end => start + items.length;
 
@@ -22,7 +25,8 @@ class MediaPage {
   bool get isLast => end >= album.count;
 
   /// Creates a range of media from platform channel protocol.
-  MediaPage.fromJson(this.album, dynamic json, {this.lightWeight})
+  MediaPage.fromJson(this.album, dynamic json,
+      {this.lightWeight, this.includeCloudStatus})
       : start = json['start'] ?? 0,
         items = json['items'].map<Medium>((x) => Medium.fromJson(x)).toList();
 
@@ -34,6 +38,7 @@ class MediaPage {
       skip: end,
       take: items.length,
       lightWeight: lightWeight,
+      includeCloudStatus: includeCloudStatus,
     );
   }
 

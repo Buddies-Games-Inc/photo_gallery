@@ -47,6 +47,11 @@ class Medium {
   /// The longitude of the photo or video. Works only on iOS platform.
   final double? longitude;
 
+  /// Indicates if the asset is stored locally on device.
+  /// On iOS, this is false if the asset needs to be downloaded from iCloud.
+  /// On Android, this is always true.
+  final bool? isOnDevice;
+
   /// Creates a medium from platform channel protocol.
   Medium.fromJson(dynamic json)
       : id = json["id"],
@@ -61,6 +66,7 @@ class Medium {
         duration = json['duration'] ?? 0,
         latitude = json['latitude'],
         longitude = json['longitude'],
+        isOnDevice = json['isOnDevice'],
         creationDate = json['creationDate'] != null
             ? DateTime.fromMillisecondsSinceEpoch(json['creationDate'])
             : null,
@@ -106,6 +112,7 @@ class Medium {
           mimeType == other.mimeType &&
           latitude == other.latitude &&
           longitude == other.longitude &&
+          isOnDevice == other.isOnDevice &&
           creationDate == other.creationDate &&
           modifiedDate == other.modifiedDate;
 
@@ -121,6 +128,7 @@ class Medium {
       mimeType.hashCode ^
       latitude.hashCode ^
       longitude.hashCode ^
+      isOnDevice.hashCode ^
       creationDate.hashCode ^
       modifiedDate.hashCode;
 
@@ -136,6 +144,7 @@ class Medium {
         'mimeType: $mimeType, '
         'latitude: $latitude, '
         'longitude: $longitude, '
+        'isOnDevice: $isOnDevice, '
         'creationDate: $creationDate, '
         'modifiedDate: $modifiedDate}';
   }

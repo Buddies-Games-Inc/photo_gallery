@@ -143,9 +143,10 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 val skip = call.argument<Int>("skip")
                 val take = call.argument<Int>("take")
                 val lightWeight = call.argument<Boolean>("lightWeight")
+                val includeCloudStatus = call.argument<Boolean>("includeCloudStatus")
                 executor.submit {
                     result.success(
-                            listMedia(mediumType, albumId!!, newest!!, skip, take, lightWeight)
+                            listMedia(mediumType, albumId!!, newest!!, skip, take, lightWeight, includeCloudStatus)
                     )
                 }
             }
@@ -343,21 +344,22 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             newest: Boolean,
             skip: Int?,
             take: Int?,
-            lightWeight: Boolean? = false
+            lightWeight: Boolean? = false,
+            includeCloudStatus: Boolean? = false
     ): Map<String, Any?> {
         return when (mediumType) {
             imageType -> {
-                listImages(albumId, newest, skip, take, lightWeight)
+                listImages(albumId, newest, skip, take, lightWeight, includeCloudStatus)
             }
             videoType -> {
-                listVideos(albumId, newest, skip, take, lightWeight)
+                listVideos(albumId, newest, skip, take, lightWeight, includeCloudStatus)
             }
             else -> {
                 val images =
-                        listImages(albumId, newest, null, null, lightWeight)["items"] as
+                        listImages(albumId, newest, null, null, lightWeight, includeCloudStatus)["items"] as
                                 List<Map<String, Any?>>
                 val videos =
-                        listVideos(albumId, newest, null, null, lightWeight)["items"] as
+                        listVideos(albumId, newest, null, null, lightWeight, includeCloudStatus)["items"] as
                                 List<Map<String, Any?>>
                 val comparator =
                         compareBy<Map<String, Any?>> { it["creationDate"] as Long }.thenBy {
@@ -383,7 +385,8 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             newest: Boolean,
             skip: Int?,
             take: Int?,
-            lightWeight: Boolean? = false
+            lightWeight: Boolean? = false,
+            includeCloudStatus: Boolean? = false
     ): Map<String, Any?> {
         val media = mutableListOf<Map<String, Any?>>()
 
@@ -396,8 +399,8 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             imageCursor?.use { cursor ->
                 while (cursor.moveToNext()) {
                     val metadata =
-                            if (lightWeight == true) getImageBriefMetadata(cursor)
-                            else getImageMetadata(cursor)
+                            if (lightWeight == true) getImageBriefMetadata(cursor, includeCloudStatus)
+                            else getImageMetadata(cursor, includeCloudStatus)
                     media.add(metadata)
                 }
             }
@@ -411,7 +414,8 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             newest: Boolean,
             skip: Int?,
             take: Int?,
-            lightWeight: Boolean? = false
+            lightWeight: Boolean? = false,
+            includeCloudStatus: Boolean? = false
     ): Map<String, Any?> {
         val media = mutableListOf<Map<String, Any?>>()
 
@@ -424,8 +428,8 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             videoCursor?.use { cursor ->
                 while (cursor.moveToNext()) {
                     val metadata =
-                            if (lightWeight == true) getVideoBriefMetadata(cursor)
-                            else getVideoMetadata(cursor)
+                            if (lightWeight == true) getVideoBriefMetadata(cursor, includeCloudStatus)
+                            else getVideoMetadata(cursor, includeCloudStatus)
                     media.add(metadata)
                 }
             }
@@ -1150,7 +1154,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         }
     }
 
-    private fun getImageMetadata(cursor: Cursor): Map<String, Any?> {
+    private fun getImageMetadata(cursor: Cursor, includeCloudStatus: Boolean? = false): Map<String, Any?> {
         val idColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID)
         val filenameColumn = cursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
         val titleColumn = cursor.getColumnIndex(MediaStore.Images.Media.TITLE)
@@ -1192,11 +1196,12 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 "creationDate" to dateAdded,
                 "modifiedDate" to dateModified,
                 "latitude" to null,
-                "longitude" to null
+                "longitude" to null,
+                "isOnDevice" to if (includeCloudStatus == true) true else null
         )
     }
 
-    private fun getImageBriefMetadata(cursor: Cursor): Map<String, Any?> {
+    private fun getImageBriefMetadata(cursor: Cursor, includeCloudStatus: Boolean? = false): Map<String, Any?> {
         val idColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID)
         val widthColumn = cursor.getColumnIndex(MediaStore.Images.Media.WIDTH)
         val heightColumn = cursor.getColumnIndex(MediaStore.Images.Media.HEIGHT)
@@ -1226,11 +1231,12 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 "creationDate" to dateAdded,
                 "modifiedDate" to dateModified,
                 "latitude" to null,
-                "longitude" to null
+                "longitude" to null,
+                "isOnDevice" to if (includeCloudStatus == true) true else null
         )
     }
 
-    private fun getVideoMetadata(cursor: Cursor): Map<String, Any?> {
+    private fun getVideoMetadata(cursor: Cursor, includeCloudStatus: Boolean? = false): Map<String, Any?> {
         val idColumn = cursor.getColumnIndex(MediaStore.Video.Media._ID)
         val filenameColumn = cursor.getColumnIndex(MediaStore.Video.Media.DISPLAY_NAME)
         val titleColumn = cursor.getColumnIndex(MediaStore.Video.Media.TITLE)
@@ -1272,11 +1278,12 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 "creationDate" to dateAdded,
                 "modifiedDate" to dateModified,
                 "latitude" to null,
-                "longitude" to null
+                "longitude" to null,
+                "isOnDevice" to if (includeCloudStatus == true) true else null
         )
     }
 
-    private fun getVideoBriefMetadata(cursor: Cursor): Map<String, Any?> {
+    private fun getVideoBriefMetadata(cursor: Cursor, includeCloudStatus: Boolean? = false): Map<String, Any?> {
         val idColumn = cursor.getColumnIndex(MediaStore.Video.Media._ID)
         val widthColumn = cursor.getColumnIndex(MediaStore.Video.Media.WIDTH)
         val heightColumn = cursor.getColumnIndex(MediaStore.Video.Media.HEIGHT)
@@ -1306,7 +1313,8 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 "creationDate" to dateAdded,
                 "modifiedDate" to dateModified,
                 "latitude" to null,
-                "longitude" to null
+                "longitude" to null,
+                "isOnDevice" to if (includeCloudStatus == true) true else null
         )
     }
 
