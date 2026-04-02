@@ -11,6 +11,7 @@ import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
 import android.util.Size
 import androidx.exifinterface.media.ExifInterface
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -32,6 +33,8 @@ import java.util.concurrent.Executors
 /** PhotoGalleryPlugin */
 class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     companion object {
+        private const val TAG = "PhotoGalleryPlugin"
+
         // This static function is optional and equivalent to onAttachedToEngine. It supports the
         // old
         // pre-Flutter-1.12 Android projects. You are encouraged to continue supporting
@@ -109,7 +112,16 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
 
+    private fun logDebug(message: String) {
+        Log.d(TAG, message)
+    }
+
+    private fun logWarn(message: String) {
+        Log.w(TAG, message)
+    }
+
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+        logDebug("onAttachedToEngine")
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "photo_gallery")
         val plugin = this
         plugin.context = flutterPluginBinding.applicationContext
@@ -117,26 +129,32 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        logDebug("onDetachedFromEngine")
         channel.setMethodCallHandler(null)
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        logDebug("onAttachedToActivity")
         this.activity = binding.activity
     }
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        logDebug("onReattachedToActivityForConfigChanges")
         this.activity = binding.activity
     }
 
     override fun onDetachedFromActivity() {
+        logDebug("onDetachedFromActivity")
         this.activity = null
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
+        logDebug("onDetachedFromActivityForConfigChanges")
         this.activity = null
     }
 
     override fun onMethodCall(call: MethodCall, result: Result) {
+        logDebug("onMethodCall method=${call.method}")
         when (call.method) {
             "listAlbums" -> {
                 val mediumType = call.argument<String>("mediumType")
@@ -232,12 +250,17 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 val mediumIds = call.argument<List<String>>("mediumIds")
                 executor.submit { result.success(getCloudStatus(mediumIds!!)) }
             }
-            else -> result.notImplemented()
+            else -> {
+                logWarn("Method not implemented: ${call.method}")
+                result.notImplemented()
+            }
         }
     }
 
     private fun listAlbums(mediumType: String?): List<Map<String, Any?>> {
-        return when (mediumType) {
+        logDebug("listAlbums mediumType=$mediumType")
+        val albums =
+                when (mediumType) {
             imageType -> {
                 listImageAlbums().values.toList()
             }
@@ -248,9 +271,12 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 listAllAlbums().values.toList()
             }
         }
+        logDebug("listAlbums resultCount=${albums.size}")
+        return albums
     }
 
     private fun listImageAlbums(): Map<String, Map<String, Any>> {
+        logDebug("listImageAlbums")
         this.context.run {
             var total = 0
             val albumHashMap = hashMapOf<String, HashMap<String, Any>>()
@@ -294,11 +320,13 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             albumLinkedMap[allAlbumId] =
                     hashMapOf("id" to allAlbumId, "name" to allAlbumName, "count" to total)
             albumLinkedMap.putAll(albumHashMap)
+            logDebug("listImageAlbums resultCount=${albumLinkedMap.size} totalItems=$total")
             return albumLinkedMap
         }
     }
 
     private fun listVideoAlbums(): Map<String, Map<String, Any>> {
+        logDebug("listVideoAlbums")
         this.context.run {
             var total = 0
             val albumHashMap = hashMapOf<String, HashMap<String, Any>>()
@@ -341,11 +369,13 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             albumLinkedMap[allAlbumId] =
                     hashMapOf("id" to allAlbumId, "name" to allAlbumName, "count" to total)
             albumLinkedMap.putAll(albumHashMap)
+            logDebug("listVideoAlbums resultCount=${albumLinkedMap.size} totalItems=$total")
             return albumLinkedMap
         }
     }
 
     private fun listAllAlbums(): Map<String, Map<String, Any?>> {
+        logDebug("listAllAlbums")
         val imageMap = this.listImageAlbums()
         val videoMap = this.listVideoAlbums()
         val albumMap =
@@ -358,6 +388,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                                             (videoMap[it]?.get("count") ?: 0) as Int,
                     )
                 }
+        logDebug("listAllAlbums resultCount=${albumMap.size}")
         return albumMap
     }
 
@@ -370,7 +401,11 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             lightWeight: Boolean? = false,
             includeCloudStatus: Boolean? = false
     ): Map<String, Any?> {
-        return when (mediumType) {
+        logDebug(
+                "listMedia mediumType=$mediumType albumId=$albumId newest=$newest skip=$skip take=$take lightWeight=$lightWeight includeCloudStatus=$includeCloudStatus"
+        )
+        val response =
+                when (mediumType) {
             imageType -> {
                 listImages(albumId, newest, skip, take, lightWeight, includeCloudStatus)
             }
@@ -403,6 +438,9 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 mapOf("start" to (skip ?: 0), "items" to items)
             }
         }
+        val items = response["items"] as? List<*>
+        logDebug("listMedia resultCount=${items?.size ?: 0}")
+        return response
     }
 
     private fun listImages(
@@ -413,6 +451,9 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             lightWeight: Boolean? = false,
             includeCloudStatus: Boolean? = false
     ): Map<String, Any?> {
+        logDebug(
+                "listImages albumId=$albumId newest=$newest skip=$skip take=$take lightWeight=$lightWeight includeCloudStatus=$includeCloudStatus"
+        )
         val media = mutableListOf<Map<String, Any?>>()
 
         this.context.run {
@@ -432,6 +473,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             }
         }
 
+        logDebug("listImages resultCount=${media.size}")
         return mapOf("start" to (skip ?: 0), "items" to media)
     }
 
@@ -443,6 +485,9 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             lightWeight: Boolean? = false,
             includeCloudStatus: Boolean? = false
     ): Map<String, Any?> {
+        logDebug(
+                "listVideos albumId=$albumId newest=$newest skip=$skip take=$take lightWeight=$lightWeight includeCloudStatus=$includeCloudStatus"
+        )
         val media = mutableListOf<Map<String, Any?>>()
 
         this.context.run {
@@ -462,10 +507,12 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             }
         }
 
+        logDebug("listVideos resultCount=${media.size}")
         return mapOf("start" to (skip ?: 0), "items" to media)
     }
 
     private fun getMedium(mediumId: String, mediumType: String?): Map<String, Any?>? {
+        logDebug("getMedium mediumId=$mediumId mediumType=$mediumType")
         return when (mediumType) {
             imageType -> {
                 getImageMedia(mediumId)
@@ -528,6 +575,9 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             height: Int?,
             highQuality: Boolean?
     ): ByteArray? {
+        logDebug(
+                "getThumbnail mediumId=$mediumId mediumType=$mediumType width=$width height=$height highQuality=$highQuality"
+        )
         return when (mediumType) {
             imageType -> {
                 getImageThumbnail(mediumId, width, height, highQuality)
@@ -592,6 +642,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                                     }
                             decodedBitmap
                         } catch (e: Exception) {
+                            Log.e(TAG, "Failed to decode image thumbnail for mediumId=$mediumId", e)
                             null
                         }
                     } else {
@@ -610,6 +661,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                             val heightSize = height ?: if (highQuality == true) 1536 else 512
                             scaleBitmap(fullBitmap, widthSize, heightSize)
                         } catch (e: Exception) {
+                            Log.e(TAG, "Failed to load legacy image thumbnail for mediumId=$mediumId", e)
                             null
                         }
                     }
@@ -664,6 +716,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                                     null
                             )
                         } catch (e: Exception) {
+                            Log.e(TAG, "Failed to load video thumbnail for mediumId=$mediumId", e)
                             null
                         }
                     } else {
@@ -696,6 +749,9 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             height: Int?,
             highQuality: Boolean?
     ): ByteArray? {
+        logDebug(
+                "getAlbumThumbnail albumId=$albumId mediumType=$mediumType newest=$newest width=$width height=$height highQuality=$highQuality"
+        )
         return when (mediumType) {
             imageType -> {
                 getImageAlbumThumbnail(albumId, newest, width, height, highQuality)
@@ -859,6 +915,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             skip: Int?,
             take: Int?
     ): Cursor? {
+        logDebug("getImageCursor albumId=$albumId newest=$newest skip=$skip take=$take")
         this.context.run {
             val isSelection = albumId != allAlbumId
             val selection = if (isSelection) "${MediaStore.Images.Media.BUCKET_ID} = ?" else null
@@ -917,6 +974,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             skip: Int?,
             take: Int?
     ): Cursor? {
+        logDebug("getVideoCursor albumId=$albumId newest=$newest skip=$skip take=$take")
         this.context.run {
             val isSelection = albumId != allAlbumId
             val selection = if (isSelection) "${MediaStore.Video.Media.BUCKET_ID} = ?" else null
@@ -969,6 +1027,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     private fun getFile(mediumId: String, mediumType: String?, mimeType: String?): String? {
+        logDebug("getFile mediumId=$mediumId mediumType=$mediumType mimeType=$mimeType")
         return when (mediumType) {
             imageType -> {
                 getImageFile(mediumId, mimeType = mimeType)
@@ -983,6 +1042,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     private fun getCoordinates(mediumId: String, mediumType: String?): Map<String, Double>? {
+        logDebug("getCoordinates mediumId=$mediumId mediumType=$mediumType")
         val isImage = mediumType != videoType
         val contentUri =
                 if (isImage) {
@@ -1012,12 +1072,14 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                     null
                 }
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to read EXIF coordinates for mediumId=$mediumId", e)
             null
         }
     }
 
     private fun getDateTimeOriginal(mediumId: String, mediumType: String?): Long? {
+        logDebug("getDateTimeOriginal mediumId=$mediumId mediumType=$mediumType")
         val isImage = mediumType != videoType
         val contentUri =
                 if (isImage) {
@@ -1050,12 +1112,14 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                     exifDateFormat.parse(dateTimeOriginalValue)?.time
                 }
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to read EXIF TAG_DATETIME_ORIGINAL for mediumId=$mediumId", e)
             null
         }
     }
 
     private fun getFilePath(mediumId: String, mediumType: String?): String? {
+        logDebug("getFilePath mediumId=$mediumId mediumType=$mediumType")
         return when (mediumType) {
             imageType -> {
                 getImageFilePath(mediumId)
@@ -1114,6 +1178,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     private fun getImageFile(mediumId: String, mimeType: String? = null): String? {
+        logDebug("getImageFile mediumId=$mediumId mimeType=$mimeType")
         return this.context.run {
             mimeType?.let {
                 val type =
@@ -1149,6 +1214,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     private fun getVideoFile(mediumId: String): String? {
+        logDebug("getVideoFile mediumId=$mediumId")
         return this.context.run {
             val videoCursor =
                     this.contentResolver.query(
@@ -1171,6 +1237,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     private fun cacheImage(mediumId: String, mimeType: String): String? {
+        logDebug("cacheImage mediumId=$mediumId mimeType=$mimeType")
         val bitmap: Bitmap? =
                 this.context.run {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -1185,6 +1252,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                                     )
                             )
                         } catch (e: Exception) {
+                            Log.e(TAG, "Failed to decode image for cache mediumId=$mediumId", e)
                             null
                         }
                     } else {
@@ -1448,6 +1516,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         return this.context.run {
             val cachePath = File(this.cacheDir, "photo_gallery")
             if (!cachePath.exists()) {
+                logDebug("Creating cache directory at ${cachePath.absolutePath}")
                 cachePath.mkdirs()
             }
             return@run cachePath
@@ -1455,6 +1524,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     private fun deleteMedium(mediumId: String, mediumType: String?) {
+        logDebug("deleteMedium mediumId=$mediumId mediumType=$mediumType")
         when (mediumType) {
             imageType -> {
                 deleteImageMedium(mediumId)
@@ -1470,6 +1540,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     private fun deleteImageMedium(mediumId: String) {
+        logDebug("deleteImageMedium mediumId=$mediumId")
         this.context.run {
             val selection = "${MediaStore.Images.Media._ID} = ?"
             val selectionArgs = arrayOf(mediumId)
@@ -1515,6 +1586,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                                     selectionArgs
                             )
                         } catch (e: SecurityException) {
+                            Log.e(TAG, "deleteImageMedium SecurityException for mediumId=$mediumId", e)
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                                 val securityException =
                                         e as? RecoverableSecurityException ?: throw e
@@ -1530,6 +1602,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     private fun deleteVideoMedium(mediumId: String) {
+        logDebug("deleteVideoMedium mediumId=$mediumId")
         this.context.run {
             val selection = "${MediaStore.Video.Media._ID} = ?"
             val selectionArgs = arrayOf(mediumId)
@@ -1574,6 +1647,7 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                                     selectionArgs
                             )
                         } catch (e: SecurityException) {
+                            Log.e(TAG, "deleteVideoMedium SecurityException for mediumId=$mediumId", e)
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                                 val securityException =
                                         e as? RecoverableSecurityException ?: throw e
@@ -1590,10 +1664,12 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
     private fun cleanCache() {
         val cachePath = getCachePath()
+        logDebug("cleanCache path=${cachePath.absolutePath}")
         cachePath.deleteRecursively()
     }
 
     private fun getCloudStatus(mediumIds: List<String>): Map<String, Boolean> {
+        logDebug("getCloudStatus idsCount=${mediumIds.size}")
         // On Android, all media is always local (no iCloud equivalent)
         return mediumIds.associateWith { true }
     }
