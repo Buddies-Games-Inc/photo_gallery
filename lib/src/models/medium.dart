@@ -35,8 +35,11 @@ class Medium {
   /// The duration of video
   final int duration;
 
-  /// The date at which the photo or video was taken.
+  /// The date at which the photo or video was written to the device.
   final DateTime? creationDate;
+
+  /// The date at which the photo or video was taken.
+  final DateTime? dateTaken;
 
   /// The date at which the photo or video was modified.
   final DateTime? modifiedDate;
@@ -69,6 +72,9 @@ class Medium {
         isOnDevice = json['isOnDevice'],
         creationDate = json['creationDate'] != null
             ? DateTime.fromMillisecondsSinceEpoch(json['creationDate'])
+            : null,
+        dateTaken = json['dateTaken'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(json['dateTaken'])
             : null,
         modifiedDate = json['modifiedDate'] != null
             ? DateTime.fromMillisecondsSinceEpoch(json['modifiedDate'])
@@ -114,6 +120,7 @@ class Medium {
           longitude == other.longitude &&
           isOnDevice == other.isOnDevice &&
           creationDate == other.creationDate &&
+          dateTaken == other.dateTaken &&
           modifiedDate == other.modifiedDate;
 
   @override
@@ -130,6 +137,7 @@ class Medium {
       longitude.hashCode ^
       isOnDevice.hashCode ^
       creationDate.hashCode ^
+      dateTaken.hashCode ^
       modifiedDate.hashCode;
 
   @override
@@ -146,6 +154,7 @@ class Medium {
         'longitude: $longitude, '
         'isOnDevice: $isOnDevice, '
         'creationDate: $creationDate, '
+        'dateTaken: $dateTaken, '
         'modifiedDate: $modifiedDate}';
   }
 }
