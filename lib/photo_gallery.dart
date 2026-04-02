@@ -166,6 +166,23 @@ class PhotoGallery {
     );
   }
 
+  /// Get EXIF DateTimeOriginal from media file metadata.
+  /// mediumId: the identifier of medium
+  /// mediumType: the type of medium (optional)
+  /// Returns DateTimeOriginal, or null if not available or on non-Android platforms.
+  static Future<DateTime?> getDateTimeOriginal({
+    required String mediumId,
+    MediumType? mediumType,
+  }) async {
+    if (!Platform.isAndroid) return null;
+    final value = await _channel.invokeMethod<int?>(
+      'getDateTimeOriginal',
+      {'mediumId': mediumId, 'mediumType': mediumTypeToJson(mediumType)},
+    );
+    if (value == null) return null;
+    return DateTime.fromMillisecondsSinceEpoch(value);
+  }
+
   /// Get file path by medium id (efficient, returns only the path string)
   /// mediumId: the identifier of medium
   /// mediumType: the type of medium

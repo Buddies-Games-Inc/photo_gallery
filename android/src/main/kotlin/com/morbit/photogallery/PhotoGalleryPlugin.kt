@@ -23,7 +23,9 @@ import io.flutter.plugin.common.MethodChannel.Result
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.text.SimpleDateFormat
 import java.util.Collections
+import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -212,6 +214,11 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 val mediumId = call.argument<String>("mediumId")
                 val mediumType = call.argument<String>("mediumType")
                 executor.submit { result.success(getCoordinates(mediumId!!, mediumType)) }
+            }
+            "getDateTimeOriginal" -> {
+                val mediumId = call.argument<String>("mediumId")
+                val mediumType = call.argument<String>("mediumType")
+                executor.submit { result.success(getDateTimeOriginal(mediumId!!, mediumType)) }
             }
             "deleteMedium" -> {
                 val mediumId = call.argument<String>("mediumId")
@@ -1003,6 +1010,44 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                     mapOf("latitude" to output[0].toDouble(), "longitude" to output[1].toDouble())
                 } else {
                     null
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun getDateTimeOriginal(mediumId: String, mediumType: String?): Long? {
+        val isImage = mediumType != videoType
+        val contentUri =
+                if (isImage) {
+                    ContentUris.withAppendedId(
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                            mediumId.toLong()
+                    )
+                } else {
+                    ContentUris.withAppendedId(
+                            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                            mediumId.toLong()
+                    )
+                }
+        return try {
+            val uriWithOriginal =
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        MediaStore.setRequireOriginal(contentUri)
+                    } else {
+                        contentUri
+                    }
+            context.contentResolver.openInputStream(uriWithOriginal)?.use { inputStream ->
+                val exifInterface = ExifInterface(inputStream)
+                val dateTimeOriginalValue =
+                        exifInterface.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
+                if (dateTimeOriginalValue.isNullOrBlank()) {
+                    null
+                } else {
+                    val exifDateFormat = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US)
+                    exifDateFormat.isLenient = false
+                    exifDateFormat.parse(dateTimeOriginalValue)?.time
                 }
             }
         } catch (_: Exception) {
