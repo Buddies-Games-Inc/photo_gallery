@@ -221,7 +221,14 @@ class PhotoGalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 val mediumId = call.argument<String>("mediumId")
                 val mediumType = call.argument<String>("mediumType")
                 val mimeType = call.argument<String>("mimeType")
-                executor.submit { result.success(getFile(mediumId!!, mediumType, mimeType)) }
+                executor.submit {
+                    // TESTING: randomly return DISK_SPACE_ERROR ~50% of the time
+                    if (Math.random() < 0.5) {
+                        result.error("DISK_SPACE_ERROR", "[TEST] Simulated disk space error", "Fake error for testing purposes")
+                    } else {
+                        result.success(getFile(mediumId!!, mediumType, mimeType))
+                    }
+                }
             }
             "getFilePath" -> {
                 val mediumId = call.argument<String>("mediumId")

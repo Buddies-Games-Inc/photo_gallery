@@ -112,6 +112,13 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
       let mediumId = arguments["mediumId"] as! String
       let mimeType = arguments["mimeType"] as? String
       DispatchQueue.global(qos: .userInitiated).async {
+        // TESTING: randomly return DISK_SPACE_ERROR ~50% of the time
+        if Bool.random() {
+          DispatchQueue.main.async {
+            result(FlutterError(code: "DISK_SPACE_ERROR", message: "[TEST] Simulated disk space error", details: "Fake error for testing purposes"))
+          }
+          return
+        }
         self.getFile(
           mediumId: mediumId,
           mimeType: mimeType,
