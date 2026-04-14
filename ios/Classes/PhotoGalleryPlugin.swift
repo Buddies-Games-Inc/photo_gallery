@@ -117,7 +117,15 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
           mimeType: mimeType,
           completion: { (filepath: String?, error: Error?) -> Void in
             DispatchQueue.main.async {
-              result(filepath?.replacingOccurrences(of: "file://", with: ""))
+              if let error = error, filepath == nil {
+                if self.isDiskSpaceError(error) {
+                  result(FlutterError(code: "DISK_SPACE_ERROR", message: "No space left on device", details: error.localizedDescription))
+                } else {
+                  result(FlutterError(code: "FILE_ERROR", message: error.localizedDescription, details: nil))
+                }
+              } else {
+                result(filepath?.replacingOccurrences(of: "file://", with: ""))
+              }
             }
           }
         )
@@ -472,18 +480,22 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
               completion(nil, NSError(domain: "photo_gallery", code: 404, userInfo: nil))
               return
             }
-            if mimeType != nil {
-              let type = self.extractMimeTypeFromUTI(uti: assetUTI)
-              if type != mimeType {
-                let path = self.cacheImage(asset: asset, data: imageData, mimeType: mimeType!)
-                completion(path, NSError(domain: "photo_gallery", code: 404, userInfo: nil))
-                return
+            do {
+              if mimeType != nil {
+                let type = self.extractMimeTypeFromUTI(uti: assetUTI)
+                if type != mimeType {
+                  let path = try self.cacheImage(asset: asset, data: imageData, mimeType: mimeType!)
+                  completion(path, nil)
+                  return
+                }
               }
+              let fileExt = self.extractFileExtensionFromUTI(uti: assetUTI)
+              let filepath = self.exportPathForAsset(asset: asset, ext: fileExt)
+              try imageData.write(to: filepath, options: .atomic)
+              completion(filepath.absoluteString, nil)
+            } catch {
+              completion(nil, error)
             }
-            let fileExt = self.extractFileExtensionFromUTI(uti: assetUTI)
-            let filepath = self.exportPathForAsset(asset: asset, ext: fileExt)
-            try! imageData.write(to: filepath, options: .atomic)
-            completion(filepath.absoluteString, nil)
           }
         )
       } else if(asset.mediaType == PHAssetMediaType.video || asset.mediaType == PHAssetMediaType.audio) {
@@ -507,10 +519,10 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
               let data = try Data(contentsOf: avAsset.url)
               let fileExt = self.extractFileExtensionFromAsset(asset: asset)
               let filepath = self.exportPathForAsset(asset: asset, ext: fileExt)
-              try! data.write(to: filepath, options: .atomic)
+              try data.write(to: filepath, options: .atomic)
               completion(filepath.absoluteString, nil)
             } catch {
-              completion(nil, NSError(domain: "photo_gallery", code: 500, userInfo: nil))
+              completion(nil, error)
             }
           }
         )
@@ -518,16 +530,16 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
     }
   }
 
-  private func cacheImage(asset: PHAsset, data: Data, mimeType: String) -> String? {
+  private func cacheImage(asset: PHAsset, data: Data, mimeType: String) throws -> String? {
     if mimeType == "image/jpeg" {
       let filepath = self.exportPathForAsset(asset: asset, ext: ".jpeg")
       let uiImage = UIImage(data: data)
-      try! uiImage?.jpegData(compressionQuality: 100)?.write(to: filepath, options: .atomic)
+      try uiImage?.jpegData(compressionQuality: 100)?.write(to: filepath, options: .atomic)
       return filepath.absoluteString
     } else if mimeType == "image/png" {
       let filepath = self.exportPathForAsset(asset: asset, ext: ".png")
       let uiImage = UIImage(data: data)
-      try! uiImage?.pngData()?.write(to: filepath, options: .atomic)
+      try uiImage?.pngData()?.write(to: filepath, options: .atomic)
       return filepath.absoluteString
     } else {
       return nil
@@ -769,8 +781,22 @@ public class PhotoGalleryPlugin: NSObject, FlutterPlugin {
   private func cachePath() -> URL {
     let paths = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
     let cacheFolder = paths[0].appendingPathComponent("photo_gallery")
-    try! FileManager.default.createDirectory(at: cacheFolder, withIntermediateDirectories: true, attributes: nil)
+    try? FileManager.default.createDirectory(at: cacheFolder, withIntermediateDirectories: true, attributes: nil)
     return cacheFolder
+  }
+
+  private func isDiskSpaceError(_ error: Error) -> Bool {
+    let nsError = error as NSError
+    if nsError.domain == NSPOSIXErrorDomain && nsError.code == 28 {
+      return true
+    }
+    if nsError.domain == NSCocoaErrorDomain && nsError.code == NSFileWriteOutOfSpaceError {
+      return true
+    }
+    if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? NSError {
+      return isDiskSpaceError(underlying)
+    }
+    return false
   }
 
   private func deleteMedium(mediumId: String, completion: @escaping (Bool, Error?) -> Void) {

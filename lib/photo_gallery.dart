@@ -129,6 +129,9 @@ class PhotoGallery {
   /// get medium file by medium id
   /// mediumType: the type of medium
   /// mimeType: the mime type of medium
+  ///
+  /// Throws [PlatformException] with code "DISK_SPACE_ERROR" when the device
+  /// has insufficient storage to export the file.
   static Future<File> getFile({
     required String mediumId,
     MediumType? mediumType,
@@ -142,6 +145,9 @@ class PhotoGallery {
     if (path == null) throw "Cannot get file $mediumId with type $mimeType";
     return File(path);
   }
+
+  /// Error code returned by native plugins when the device runs out of storage.
+  static const String diskSpaceErrorCode = 'DISK_SPACE_ERROR';
 
   /// Get GPS coordinates from image file EXIF data.
   /// mediumId: the identifier of medium
