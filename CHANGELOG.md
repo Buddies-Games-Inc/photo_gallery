@@ -1,3 +1,11 @@
+# 2.3.0
+
+Add Swift Package Manager support for iOS (`ios/photo_gallery/Package.swift`). CocoaPods is still supported.
+
+Add `dateTaken` to `Medium` (read from EXIF / `DATE_TAKEN` on Android).
+
+Improve error handling and logging in the Android plugin, including disk space error detection.
+
 # 2.2.1
 
 Upgrade ```flutter_lints``` dependency, and then lint code according to the ```public_member_api_docs``` and ```use_string_in_part_of_directives``` rule.
